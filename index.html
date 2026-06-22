@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Job Hunt Automation</title>
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="header-inner">
+        <div class="header-title">
+          <span class="logo">⚡</span>
+          <h1>Job Hunt Automation</h1>
+        </div>
+        <div id="auth-area">
+          <button id="google-signin-btn" class="btn btn-google">Sign in with Google</button>
+          <div id="user-info" class="hidden">
+            <span id="user-email-display" class="user-chip"></span>
+            <button id="signout-btn" class="btn btn-ghost">Sign out</button>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div id="error-msg" class="alert alert-error hidden"></div>
+      <div id="success-msg" class="alert alert-success hidden"></div>
+
+      <section class="card" id="setup-card">
+        <div class="card-header" id="setup-toggle">
+          <h2>⚙️ Setup <span class="badge badge-required">Required once</span></h2>
+          <span class="chevron">▾</span>
+        </div>
+        <div class="card-body" id="setup-body">
+          <div class="setup-grid">
+            <div class="form-group">
+              <label for="google-client-id">Google OAuth Client ID</label>
+              <input type="text" id="google-client-id" placeholder="1234567890-abc...apps.googleusercontent.com" />
+              <p class="hint"><a href="https://console.cloud.google.com/apis/credentials" target="_blank">Create here</a> → OAuth Client → Web app</p>
+            </div>
+            <div class="form-group">
+              <label for="api-key">OpenRouter API Key</label>
+              <input type="password" id="api-key" placeholder="sk-or-v1-..." />
+              <p class="hint"><a href="https://openrouter.ai/keys" target="_blank">Get your key</a></p>
+            </div>
+            <div class="form-group">
+              <label for="spreadsheet-id">Google Sheet ID (optional)</label>
+              <input type="text" id="spreadsheet-id" placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" />
+              <p class="hint">From Sheet URL: .../spreadsheets/d/<strong>ID</strong>/edit</p>
+            </div>
+          </div>
+          <div class="form-group">
+            <label for="base-cv">Your Base CV <span class="badge">Paste as plain text</span></label>
+            <textarea id="base-cv" rows="14" placeholder="Paste your full CV here..."></textarea>
+          </div>
+          <button id="save-settings-btn" class="btn btn-primary">Save Settings</button>
+        </div>
+      </section>
+
+      <section class="card" id="controls-card">
+        <div class="controls-row">
+          <div class="form-group inline">
+            <label for="date-range">Scan last</label>
+            <select id="date-range">
+              <option value="1">1 day</option>
+              <option value="3" selected>3 days</option>
+              <option value="7">7 days</option>
+            </select>
+          </div>
+          <button id="run-btn" class="btn btn-run" disabled>▶ Run Now</button>
+        </div>
+      </section>
+
+      <section class="card hidden" id="progress-card">
+        <div class="progress-steps">
+          <div class="step" id="step-cleanup"><div class="step-dot"></div><span>Cleanup</span></div>
+          <div class="step-line"></div>
+          <div class="step" id="step-scan"><div class="step-dot"></div><span>Scan Gmail</span></div>
+          <div class="step-line"></div>
+          <div class="step" id="step-parse"><div class="step-dot"></div><span>Parse Jobs</span></div>
+          <div class="step-line"></div>
+          <div class="step" id="step-generate"><div class="step-dot"></div><span>Generate</span></div>
+          <div class="step-line"></div>
+          <div class="step" id="step-save"><div class="step-dot"></div><span>Save</span></div>
+        </div>
+        <div id="progress-log" class="log-container"></div>
+      </section>
+
+      <section class="hidden" id="results-section">
+        <h2 class="results-heading">Results <span id="results-count" class="badge badge-count"></span></h2>
+        <div id="job-cards"></div>
+      </section>
+    </main>
+  </div>
+  <script type="module" src="src/main.js"></script>
+</body>
+</html>
