@@ -6,13 +6,14 @@ import { ContentGenerator } from './utils/generator.js';
 import { isJobEmail, isTargetRole, getHeader, decodeEmailBody, extractJobLinks } from './utils/emailParser.js';
 
 const SHEET_NAME = 'Job Applications Tracker';
-const ROOT_FOLDER = 'Job Applications';
+const ROOT_FOLDER = 'Job Hunt Automation';
 const CV_FOLDER = 'CVs';
 
 export class App {
   constructor() { this.results = []; this.$log = document.getElementById('progress-log'); }
 
   setup(token, spreadsheetId) {
+    this._token = token;
     this.gmail = new GmailAPI(token);
     this.drive = new DriveAPI(token);
     this.sheets = spreadsheetId ? new SheetsAPI(token) : null;
@@ -68,6 +69,12 @@ export class App {
 
     const rootId = await this.drive.findOrCreateFolder(ROOT_FOLDER);
     const cvFolderId = await this.drive.findOrCreateFolder(CV_FOLDER, rootId);
+
+    if (!this.spreadsheetId) {
+      this.spreadsheetId = await this.drive.findOrCreateSpreadsheet(SHEET_NAME, rootId);
+      this.sheets = new SheetsAPI(this._token);
+      this.log(`Sheet auto-created in Drive: ${SHEET_NAME}`);
+    }
     if (this.sheets && this.spreadsheetId) await this.sheets.ensureHeaders(this.spreadsheetId, SHEET_NAME);
 
     for (let i = 0; i < leads.length; i++) {
@@ -110,6 +117,7 @@ export class App {
       } catch (err) { this.log(`  ✗ ${err.message}`, 'error'); }
     }
     this.log(`✓ Done — ${this.results.length} job(s) processed`, 'success');
+    return { spreadsheetId: this.spreadsheetId };
   }
 
   async _cleanup() {

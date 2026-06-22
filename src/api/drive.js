@@ -32,6 +32,17 @@ export class DriveAPI {
     return res.json();
   }
 
+  async findOrCreateSpreadsheet(name, folderId) {
+    let q = `name='${name}' and mimeType='application/vnd.google-apps.spreadsheet' and trashed=false`;
+    if (folderId) q += ` and '${folderId}' in parents`;
+    const data = await this._fetch(`${BASE}/files?${new URLSearchParams({ q, fields: 'files(id)' })}`);
+    if (data.files?.length > 0) return data.files[0].id;
+    const meta = { name, mimeType: 'application/vnd.google-apps.spreadsheet' };
+    if (folderId) meta.parents = [folderId];
+    const created = await this._fetch(`${BASE}/files`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(meta) });
+    return created.id;
+  }
+
   async deleteFile(fileId) {
     const res = await fetch(`${BASE}/files/${fileId}`, { method: 'DELETE', headers: { Authorization: `Bearer ${this.token}` } });
     if (!res.ok && res.status !== 404) throw new Error(`Drive delete ${res.status}`);

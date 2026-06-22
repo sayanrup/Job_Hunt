@@ -76,7 +76,15 @@ async function runPipeline() {
   if (!baseCV) { showError('Paste your base CV in Setup'); return; }
   const btn = document.getElementById('run-btn');
   btn.disabled = true; btn.textContent = '⏳ Running...';
-  try { app.setup(accessToken, sheetId || null); await app.run(apiKey, baseCV, days); }
+  try {
+    app.setup(accessToken, sheetId || null);
+    const result = await app.run(apiKey, baseCV, days);
+    if (result?.spreadsheetId && result.spreadsheetId !== sheetId) {
+      store.set(KEYS.sheetId, result.spreadsheetId);
+      document.getElementById('spreadsheet-id').value = result.spreadsheetId;
+      showSuccess('Sheet auto-created in "Job Hunt Automation" folder — ID saved');
+    }
+  }
   catch (err) { showError('Run failed: ' + err.message); }
   finally { btn.disabled = false; btn.textContent = '▶ Run Now'; }
 }
