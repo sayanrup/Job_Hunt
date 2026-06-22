@@ -3,7 +3,7 @@ import { DriveAPI } from './api/drive.js';
 import { SheetsAPI } from './api/sheets.js';
 import { OpenRouterAPI } from './api/openrouter.js';
 import { ContentGenerator } from './utils/generator.js';
-import { isJobEmail, getHeader, decodeEmailBody, extractJobLinks } from './utils/emailParser.js';
+import { isJobEmail, isTargetRole, getHeader, decodeEmailBody, extractJobLinks } from './utils/emailParser.js';
 
 const SHEET_NAME = 'Job Applications Tracker';
 const ROOT_FOLDER = 'Job Applications';
@@ -76,6 +76,7 @@ export class App {
       try {
         const job = await gen.extractJobDetails(link, subject, text);
         this.log(`  → ${job.company} | ${job.role}`);
+        if (!isTargetRole(job.role)) { this.log(`  ↷ Skipped — not a PM/SPM role`, 'warn'); continue; }
         this.step('step-parse', 'done');
         this.step('step-generate', 'active');
 
@@ -129,7 +130,11 @@ export class App {
 
   async _scanGmail(days) {
     const after = Math.floor((Date.now() - days * 86400_000) / 1000);
-    const queries = [`from:naukri.com after:${after}`, `from:linkedin.com after:${after} (job OR jobs OR opportunity)`, `from:instahyre.com after:${after}`];
+    const queries = [
+      `from:naukri.com subject:"Priority Applicant" after:${after}`,
+      `from:jobalerts-noreply@linkedin.com after:${after}`,
+      `from:glassdoor.com after:${after}`,
+    ];
     const all = [];
     for (const q of queries) {
       try {

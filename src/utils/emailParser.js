@@ -1,12 +1,20 @@
-const JOB_SENDERS = ['naukri.com', 'linkedin.com', 'instahyre.com'];
+const JOB_SENDERS = ['naukri.com', 'linkedin.com', 'glassdoor.com'];
+
+const TARGET_ROLES = ['product manager', 'senior product manager'];
 
 const LINK_PATTERNS = [
   /https?:\/\/[^\s"'<>]*naukri\.com\/job-listings[^\s"'<>]*/gi,
   /https?:\/\/[^\s"'<>]*naukri\.com\/[^"'\s<>]*job[^\s"'<>]*/gi,
   /https?:\/\/[^\s"'<>]*linkedin\.com\/jobs\/view[^\s"'<>]*/gi,
   /https?:\/\/[^\s"'<>]*linkedin\.com\/comm\/jobs\/view[^\s"'<>]*/gi,
-  /https?:\/\/[^\s"'<>]*instahyre\.com\/job[^\s"'<>]*/gi,
+  /https?:\/\/[^\s"'<>]*glassdoor\.com\/job-listing[^\s"'<>]*/gi,
+  /https?:\/\/[^\s"'<>]*glassdoor\.com\/[^"'\s<>]*job[^\s"'<>]*/gi,
 ];
+
+export function isTargetRole(role = '') {
+  const r = role.toLowerCase().trim();
+  return TARGET_ROLES.some(t => r === t || r.startsWith(t));
+}
 
 export function isJobEmail(message) {
   const from = (message.payload?.headers || []).find(h => h.name.toLowerCase() === 'from')?.value?.toLowerCase() || '';
@@ -45,7 +53,7 @@ export function extractJobLinks(text, html = '') {
   }
   (source.match(/https?:\/\/[^\s"'<>]+/gi) || []).forEach(link => {
     const clean = link.replace(/[.,;:'">[\])\s]+$/, '');
-    if (/naukri\.com|linkedin\.com\/jobs|instahyre\.com/.test(clean)) found.add(clean);
+    if (/naukri\.com|linkedin\.com\/jobs|glassdoor\.com/.test(clean)) found.add(clean);
   });
   return [...found].slice(0, 5);
 }
