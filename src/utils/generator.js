@@ -10,7 +10,11 @@ Return ONLY a valid JSON object. Schema: {"company":"string","role":"string","lo
     const raw = await this.api.complete(system, user, 600);
     try {
       const match = raw.match(/\{[\s\S]*\}/);
-      return match ? JSON.parse(match[0]) : this._fallback(subject);
+      if (!match) return this._fallback(subject);
+      const parsed = JSON.parse(match[0]);
+      parsed.company = parsed.company || 'Unknown';
+      parsed.role = parsed.role || subject.slice(0, 60);
+      return parsed;
     } catch { return this._fallback(subject); }
   }
 

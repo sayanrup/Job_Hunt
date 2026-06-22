@@ -87,6 +87,18 @@ export class App {
         this.step('step-parse', 'done');
         this.step('step-generate', 'active');
 
+        if (!job.hmEmail) {
+          this.log(`  ↷ No HM email — skipping CV generation`, 'warn');
+          const linkedInMsg = await gen.generateLinkedInMessage(job);
+          if (this.sheets && this.spreadsheetId) {
+            const date = new Date().toISOString().split('T')[0];
+            await this.sheets.appendRow(this.spreadsheetId, SHEET_NAME, [date, job.company, job.role, link || '', '', '', linkedInMsg, 'No HM Email']);
+          }
+          this.results.push({ job, link, cvLink: null, coverLetter: null, linkedInMsg, draftCreated: false });
+          this._renderResults();
+          continue;
+        }
+
         const [cv, coverLetter, linkedInMsg] = await Promise.all([gen.generateCV(baseCV, job), gen.generateCoverLetter(baseCV, job), gen.generateLinkedInMessage(job)]);
         this.log('  → Materials generated');
         this.step('step-generate', 'done');
@@ -97,21 +109,17 @@ export class App {
         const { webViewLink: cvLink } = await this.drive.uploadTextFile(fileName, cv, cvFolderId);
         this.log(`  → CV saved: ${fileName}`);
 
-        let draftCreated = false;
-        if (job.hmEmail) {
-          const draft = gen.buildEmailDraft(coverLetter, cv, job);
-          await this.gmail.createDraft(job.hmEmail, draft.subject, draft.body);
-          draftCreated = true;
-          this.log(`  → Draft created for ${job.hmEmail}`);
-        }
+        const draft = gen.buildEmailDraft(coverLetter, cv, job);
+        await this.gmail.createDraft(job.hmEmail, draft.subject, draft.body);
+        this.log(`  → Draft created for ${job.hmEmail}`);
 
         if (this.sheets && this.spreadsheetId) {
-          await this.sheets.appendRow(this.spreadsheetId, SHEET_NAME, [date, job.company, job.role, link || '', job.hmEmail || '', cvLink, linkedInMsg, 'Pending']);
+          await this.sheets.appendRow(this.spreadsheetId, SHEET_NAME, [date, job.company, job.role, link || '', job.hmEmail, cvLink, linkedInMsg, 'Pending']);
           this.log('  → Row added to tracker');
         }
 
         this.step('step-save', 'done');
-        this.results.push({ job, link, cvLink, coverLetter, linkedInMsg, draftCreated });
+        this.results.push({ job, link, cvLink, coverLetter, linkedInMsg, draftCreated: true });
         this._renderResults();
         if (i < leads.length - 1) await new Promise(r => setTimeout(r, 1000));
       } catch (err) { this.log(`  ✗ ${err.message}`, 'error'); }
