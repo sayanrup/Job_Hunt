@@ -1,7 +1,7 @@
 export class OpenRouterAPI {
   constructor(apiKey) {
     this.apiKey = apiKey;
-    this.model = 'anthropic/claude-sonnet-4-5';
+    this.model = 'anthropic/claude-sonnet-4-6';
   }
 
   async complete(system, user, maxTokens = 2000) {
