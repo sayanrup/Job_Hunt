@@ -1,10 +1,10 @@
 export class OpenRouterAPI {
   constructor(apiKey) {
     this.apiKey = apiKey;
-    this.model = 'anthropic/claude-sonnet-4-6';
+    this.model = 'anthropic/claude-haiku-4-5';
   }
 
-  async complete(system, user, maxTokens = 2000) {
+  async complete(system, user, maxTokens = 800) {
     const res = await fetch('https://openrouter.ai/api/v1/chat/completions', {
       method: 'POST',
       headers: { Authorization: `Bearer ${this.apiKey}`, 'Content-Type': 'application/json', 'HTTP-Referer': window.location.href, 'X-Title': 'Job Hunt Automation' },
