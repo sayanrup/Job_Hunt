@@ -38,7 +38,8 @@ export function decodeEmailBody(message) {
   if (part.mime === 'text/html') {
     const div = document.createElement('div');
     div.innerHTML = decoded;
-    return { text: div.innerText, html: decoded };
+    const text = div.innerText.replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n').trim();
+    return { text, html: decoded };
   }
   return { text: decoded, html: '' };
 }
@@ -48,6 +49,14 @@ export function extractJobLinks(text, html = '') {
   const found = new Set();
   for (const re of LINK_PATTERNS) {
     (source.match(re) || []).forEach(m => found.add(m.replace(/[.,;:'">[\])\s]+$/, '')));
+  }
+  if (found.size === 0) {
+    (source.match(/https?:\/\/[^\s"'<>]+/gi) || []).forEach(link => {
+      const clean = link.replace(/[.,;:'">[\])\s]+$/, '');
+      if (/naukri\.com/.test(clean) && !/\/(login|signup|jobseeker\/profile|settings)/.test(clean)) found.add(clean);
+      else if (/linkedin\.com\/jobs/.test(clean)) found.add(clean);
+      else if (/glassdoor\.com\/job/.test(clean)) found.add(clean);
+    });
   }
   return [...found].slice(0, 5);
 }
