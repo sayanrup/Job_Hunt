@@ -1,7 +1,7 @@
 import { App } from './app.js';
 
 const SCOPES = ['https://www.googleapis.com/auth/gmail.readonly','https://www.googleapis.com/auth/gmail.compose','https://www.googleapis.com/auth/drive.file','https://www.googleapis.com/auth/spreadsheets'].join(' ');
-const KEYS = { clientId: 'jha_google_client_id', apiKey: 'jha_openrouter_key', baseCV: 'jha_base_cv', sheetId: 'jha_spreadsheet_id' };
+const KEYS = { clientId: 'jha_google_client_id', apiKey: 'jha_openrouter_key', baseCV: 'jha_base_cv', sheetId: 'jha_spreadsheet_id', model: 'jha_model' };
 
 let tokenClient = null, accessToken = null;
 const app = new App();
@@ -71,6 +71,8 @@ async function runPipeline() {
   const baseCV = store.get(KEYS.baseCV) || document.getElementById('base-cv').value.trim();
   const sheetId = store.get(KEYS.sheetId) || document.getElementById('spreadsheet-id').value.trim();
   const days = parseInt(document.getElementById('date-range').value, 10);
+  const model = document.getElementById('model-select').value;
+  store.set(KEYS.model, model);
   if (!accessToken) { showError('Please sign in with Google first'); return; }
   if (!apiKey) { showError('OpenRouter API key is missing'); return; }
   if (!baseCV) { showError('Paste your base CV in Setup'); return; }
@@ -78,7 +80,7 @@ async function runPipeline() {
   btn.disabled = true; btn.textContent = '⏳ Running...';
   try {
     app.setup(accessToken, sheetId || null);
-    const result = await app.run(apiKey, baseCV, days);
+    const result = await app.run(apiKey, baseCV, days, model);
     if (result?.spreadsheetId && result.spreadsheetId !== sheetId) {
       store.set(KEYS.sheetId, result.spreadsheetId);
       document.getElementById('spreadsheet-id').value = result.spreadsheetId;
@@ -90,11 +92,12 @@ async function runPipeline() {
 }
 
 function init() {
-  const savedClientId = store.get(KEYS.clientId), savedKey = store.get(KEYS.apiKey), savedCV = store.get(KEYS.baseCV), savedSheetId = store.get(KEYS.sheetId);
+  const savedClientId = store.get(KEYS.clientId), savedKey = store.get(KEYS.apiKey), savedCV = store.get(KEYS.baseCV), savedSheetId = store.get(KEYS.sheetId), savedModel = store.get(KEYS.model);
   if (savedClientId) document.getElementById('google-client-id').value = savedClientId;
   if (savedKey) document.getElementById('api-key').value = savedKey;
   if (savedCV) document.getElementById('base-cv').value = savedCV;
   if (savedSheetId) document.getElementById('spreadsheet-id').value = savedSheetId;
+  if (savedModel) document.getElementById('model-select').value = savedModel;
   document.getElementById('google-signin-btn').addEventListener('click', requestSignIn);
   document.getElementById('signout-btn').addEventListener('click', signOut);
   document.getElementById('save-settings-btn').addEventListener('click', saveSettings);

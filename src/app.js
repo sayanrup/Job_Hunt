@@ -37,12 +37,12 @@ export class App {
     }
   }
 
-  async run(apiKey, baseCV, days) {
+  async run(apiKey, baseCV, days, model) {
     document.getElementById('progress-card').classList.remove('hidden');
     document.getElementById('results-section').classList.add('hidden');
     this.$log.innerHTML = '';
     this.results = [];
-    const gen = new ContentGenerator(new OpenRouterAPI(apiKey));
+    const gen = new ContentGenerator(new OpenRouterAPI(apiKey, model));
 
     this.step('step-cleanup', 'active');
     this.log('Starting cleanup...');
@@ -89,17 +89,16 @@ export class App {
 
         if (!job.hmEmail) {
           this.log(`  ↷ No HM email — skipping CV generation`, 'warn');
-          const linkedInMsg = await gen.generateLinkedInMessage(job);
           if (this.sheets && this.spreadsheetId) {
             const date = new Date().toISOString().split('T')[0];
-            await this.sheets.appendRow(this.spreadsheetId, SHEET_NAME, [date, job.company, job.role, link || '', '', '', linkedInMsg, 'No HM Email']);
+            await this.sheets.appendRow(this.spreadsheetId, SHEET_NAME, [date, job.company, job.role, link || '', '', '', 'No HM Email']);
           }
-          this.results.push({ job, link, cvLink: null, coverLetter: null, linkedInMsg, draftCreated: false });
+          this.results.push({ job, link, cvLink: null, coverLetter: null, draftCreated: false });
           this._renderResults();
           continue;
         }
 
-        const [cv, coverLetter, linkedInMsg] = await Promise.all([gen.generateCV(baseCV, job), gen.generateCoverLetter(baseCV, job), gen.generateLinkedInMessage(job)]);
+        const [cv, coverLetter] = await Promise.all([gen.generateCV(baseCV, job), gen.generateCoverLetter(baseCV, job)]);
         this.log('  → Materials generated');
         this.step('step-generate', 'done');
         this.step('step-save', 'active');
@@ -114,12 +113,12 @@ export class App {
         this.log(`  → Draft created for ${job.hmEmail}`);
 
         if (this.sheets && this.spreadsheetId) {
-          await this.sheets.appendRow(this.spreadsheetId, SHEET_NAME, [date, job.company, job.role, link || '', job.hmEmail, cvLink, linkedInMsg, 'Pending']);
+          await this.sheets.appendRow(this.spreadsheetId, SHEET_NAME, [date, job.company, job.role, link || '', job.hmEmail, cvLink, 'Pending']);
           this.log('  → Row added to tracker');
         }
 
         this.step('step-save', 'done');
-        this.results.push({ job, link, cvLink, coverLetter, linkedInMsg, draftCreated: true });
+        this.results.push({ job, link, cvLink, coverLetter, draftCreated: true });
         this._renderResults();
         if (i < leads.length - 1) await new Promise(r => setTimeout(r, 1000));
       } catch (err) { this.log(`  ✗ ${err.message}`, 'error'); }
@@ -131,13 +130,13 @@ export class App {
   async _cleanup() {
     if (!this.sheets || !this.spreadsheetId) { this.log('No sheet configured, skipping cleanup'); return; }
     try {
-      const rows = await this.sheets.getValues(this.spreadsheetId, `${SHEET_NAME}!A2:H`);
+      const rows = await this.sheets.getValues(this.spreadsheetId, `${SHEET_NAME}!A2:G`);
       let n = 0;
       for (let i = 0; i < rows.length; i++) {
-        const [,,,,,cvLink,,status] = rows[i];
+        const [,,,,,cvLink, status] = rows[i];
         if (status === 'Sent' && cvLink) {
           const m = cvLink.match(/\/file\/d\/([^/]+)/);
-          if (m) { await this.drive.deleteFile(m[1]).catch(() => {}); await this.sheets.updateCell(this.spreadsheetId, `${SHEET_NAME}!H${i + 2}`, 'Deleted'); n++; }
+          if (m) { await this.drive.deleteFile(m[1]).catch(() => {}); await this.sheets.updateCell(this.spreadsheetId, `${SHEET_NAME}!G${i + 2}`, 'Deleted'); n++; }
         }
       }
       this.log(`Cleanup: removed ${n} CV(s)`);
@@ -147,9 +146,9 @@ export class App {
   async _scanGmail(days) {
     const after = Math.floor((Date.now() - days * 86400_000) / 1000);
     const queries = [
-      `from:naukri.com subject:"Priority Applicant" after:${after}`,
+      `from:naukri subject:"Priority Applicant" after:${after}`,
       `from:jobalerts-noreply@linkedin.com after:${after}`,
-      `from:glassdoor.com after:${after}`,
+      `from:glassdoor after:${after}`,
     ];
     const all = [];
     for (const q of queries) {
@@ -166,7 +165,7 @@ export class App {
     document.getElementById('results-section').classList.remove('hidden');
     document.getElementById('results-count').textContent = this.results.length;
     container.innerHTML = '';
-    this.results.forEach(({ job, link, cvLink, coverLetter, linkedInMsg, draftCreated }) => {
+    this.results.forEach(({ job, link, cvLink, coverLetter, draftCreated }) => {
       const card = document.createElement('div');
       card.className = 'job-card';
       card.innerHTML = `
@@ -180,24 +179,18 @@ export class App {
         <div class="job-card-body">
           <div class="job-meta">
             ${link ? `<a href="${esc(link)}" target="_blank" class="link">📋 View JD</a>` : ''}
-            <a href="${esc(cvLink)}" target="_blank" class="link">📄 View CV on Drive</a>
+            ${cvLink ? `<a href="${esc(cvLink)}" target="_blank" class="link">📄 View CV on Drive</a>` : ''}
             ${job.hmEmail ? `<span class="hm-email">📧 ${esc(job.hmEmail)}</span>` : ''}
             ${job.location ? `<span style="color:var(--text-muted);font-size:13px">📍 ${esc(job.location)}</span>` : ''}
           </div>
-          <div>
-            <div class="section-label">LinkedIn Message</div>
-            <div class="copyable-box">
-              <p id="li-${this.results.length}">${esc(linkedInMsg)}</p>
-              <button class="btn btn-copy" onclick="copyText('li-${this.results.length}',this)">Copy</button>
-            </div>
-          </div>
+          ${coverLetter ? `
           <details>
             <summary>Cover Letter</summary>
             <div class="copyable-box" style="margin-top:8px">
               <pre id="cl-${this.results.length}">${esc(coverLetter)}</pre>
               <button class="btn btn-copy" onclick="copyText('cl-${this.results.length}',this)">Copy</button>
             </div>
-          </details>
+          </details>` : ''}
           ${job.jdSummary ? `<details><summary>JD Summary</summary><p style="font-size:13px;color:var(--text-muted);padding:8px 0">${esc(job.jdSummary)}</p></details>` : ''}
         </div>`;
       container.prepend(card);

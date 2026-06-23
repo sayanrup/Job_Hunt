@@ -1,10 +1,9 @@
-const PORTFOLIO = 'https://sayanrup.github.io/SAYAN/';
-
 export class ContentGenerator {
   constructor(api) { this.api = api; }
 
   async extractJobDetails(url, subject, emailText) {
     const system = `You are a job data extraction assistant. Extract structured information from job suggestion emails.
+IMPORTANT: Extract "company" from the job listing body content, NOT from the email subject line.
 Return ONLY a valid JSON object. Schema: {"company":"string","role":"string","location":"string or null","jdSummary":"2-3 sentence summary","keySkills":["skill1"],"hmEmail":"email or null"}`;
     const user = `Job URL: ${url || 'not available'}\nEmail Subject: ${subject}\n\nEmail Content:\n${emailText.slice(0, 1500)}`;
     const raw = await this.api.complete(system, user, 400);
@@ -32,12 +31,6 @@ Return ONLY a valid JSON object. Schema: {"company":"string","role":"string","lo
     const system = `Write a 3-paragraph PM cover letter under 300 words. Para1: hook + why this company. Para2: quantified achievement. Para3: CTA close. Sign off: Sayan Samanta`;
     const user = `Role: ${job.role} at ${job.company}\nJD: ${job.jdSummary}\n\nCandidate CV:\n${baseCV.slice(0, 1200)}`;
     return this.api.complete(system, user, 500);
-  }
-
-  async generateLinkedInMessage(job) {
-    const system = `Write a LinkedIn connection message under 250 chars. Mention company+role. End with: ${PORTFOLIO}. No clichés.`;
-    const user = `Company: ${job.company}\nRole: ${job.role}`;
-    return this.api.complete(system, user, 100);
   }
 
   buildEmailDraft(coverLetter, cv, job) {
