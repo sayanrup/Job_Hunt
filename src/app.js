@@ -57,12 +57,13 @@ export class App {
     if (!emails.length) { this.log('No job emails — done.', 'warn'); return; }
 
     const leads = [];
+    const seenLinks = new Set();
     for (const email of emails) {
       const { text, html } = decodeEmailBody(email);
       const subject = getHeader(email, 'subject');
-      const links = extractJobLinks(text, html);
+      const links = extractJobLinks(text, html).filter(l => !seenLinks.has(l) && seenLinks.add(l));
       if (links.length) links.forEach(link => leads.push({ link, text, subject }));
-      else leads.push({ link: null, text, subject });
+      else if (!seenLinks.has(subject) && seenLinks.add(subject)) leads.push({ link: null, text, subject });
     }
     this.log(`Extracted ${leads.length} job lead(s)`);
     this.step('step-parse', 'active');
@@ -77,6 +78,7 @@ export class App {
     }
     if (this.sheets && this.spreadsheetId) await this.sheets.ensureHeaders(this.spreadsheetId, SHEET_NAME);
 
+    const seenJobs = new Set();
     for (let i = 0; i < leads.length; i++) {
       const { link, text, subject } = leads[i];
       this.log(`Job ${i + 1}/${leads.length}: ${subject.slice(0, 55)}...`);
@@ -84,6 +86,9 @@ export class App {
         const job = await gen.extractJobDetails(link, subject, text);
         this.log(`  → ${job.company} | ${job.role}`);
         if (!isTargetRole(job.role)) { this.log(`  ↷ Skipped — not a PM/SPM role`, 'warn'); continue; }
+        const jobKey = `${job.company}::${job.role}`.toLowerCase();
+        if (seenJobs.has(jobKey)) { this.log(`  ↷ Duplicate — already processed`, 'warn'); continue; }
+        seenJobs.add(jobKey);
         this.step('step-parse', 'done');
         this.step('step-generate', 'active');
 

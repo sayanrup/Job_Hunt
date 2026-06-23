@@ -78,9 +78,9 @@ export function extractJobLinks(text, html = '') {
 
 function isJobUrl(url) {
   if (!url) return false;
-  if (/naukri\.com/.test(url) && !/\/(login|signup|jobseeker\/profile|settings)/.test(url)) return true;
-  if (/linkedin\.com\/jobs/.test(url)) return true;
-  if (/glassdoor\.com\/job/.test(url)) return true;
+  if (/^https?:\/\/(?:www\.)?naukri\.com\/(job-listings|jobs-in|apply)/.test(url)) return true;
+  if (/linkedin\.com\/(comm\/)?jobs\/view/.test(url)) return true;
+  if (/glassdoor\.com\/job-listing/.test(url)) return true;
   return false;
 }
 
