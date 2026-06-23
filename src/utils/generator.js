@@ -3,22 +3,35 @@ export class ContentGenerator {
 
   async extractJobDetails(url, subject, emailText) {
     const system = `You are a job data extraction assistant. Extract structured information from job suggestion emails.
-IMPORTANT: Extract "company" from the job listing body content, NOT from the email subject line.
+IMPORTANT: Extract "company" and "role" from the job listing body content, NOT from the email subject line.
 Return ONLY a valid JSON object. Schema: {"company":"string","role":"string","location":"string or null","jdSummary":"2-3 sentence summary","keySkills":["skill1"],"hmEmail":"email or null"}`;
-    const user = `Job URL: ${url || 'not available'}\nEmail Subject: ${subject}\n\nEmail Content:\n${emailText.slice(0, 1500)}`;
-    const raw = await this.api.complete(system, user, 400);
+    const user = `Job URL: ${url || 'not available'}\nEmail Subject: ${subject}\n\nEmail Content:\n${emailText.slice(0, 3000)}`;
+    const raw = await this.api.complete(system, user, 600);
     try {
       const match = raw.match(/\{[\s\S]*\}/);
-      if (!match) return this._fallback(subject);
+      if (!match) return this._fallback(subject, url);
       const parsed = JSON.parse(match[0]);
+      if (!parsed.company || parsed.company === 'Unknown') {
+        const fromUrl = parseNaukriUrl(url);
+        if (fromUrl.company) parsed.company = fromUrl.company;
+        if (fromUrl.role && (!parsed.role || parsed.role === subject.slice(0, 60))) parsed.role = fromUrl.role;
+      }
       parsed.company = parsed.company || 'Unknown';
       parsed.role = parsed.role || subject.slice(0, 60);
       return parsed;
-    } catch { return this._fallback(subject); }
+    } catch { return this._fallback(subject, url); }
   }
 
-  _fallback(subject) {
-    return { company: 'Unknown', role: subject.slice(0, 60), location: null, jdSummary: subject, keySkills: [], hmEmail: null };
+  _fallback(subject, url) {
+    const fromUrl = parseNaukriUrl(url);
+    return {
+      company: fromUrl.company || 'Unknown',
+      role: fromUrl.role || subject.slice(0, 60),
+      location: null,
+      jdSummary: subject,
+      keySkills: [],
+      hmEmail: null,
+    };
   }
 
   async generateCV(baseCV, job) {
@@ -36,4 +49,25 @@ Return ONLY a valid JSON object. Schema: {"company":"string","role":"string","lo
   buildEmailDraft(coverLetter, cv, job) {
     return { subject: `Application for ${job.role} at ${job.company}`, body: `${coverLetter}\n\n${'─'.repeat(50)}\n\nCV ATTACHED BELOW\n\n${cv}` };
   }
+}
+
+function parseNaukriUrl(url) {
+  if (!url) return {};
+  const m = url.match(/naukri\.com\/job-listings-(.+?)(?:-\d{10,})?(?:[?#]|$)/i);
+  if (!m) return {};
+  const slug = m[1];
+  const roleMap = [
+    { prefix: 'senior-product-manager-', role: 'Senior Product Manager' },
+    { prefix: 'product-manager-', role: 'Product Manager' },
+    { prefix: 'associate-product-manager-', role: 'Associate Product Manager' },
+  ];
+  for (const { prefix, role } of roleMap) {
+    if (slug.startsWith(prefix)) {
+      const rest = slug.slice(prefix.length);
+      const companySlug = rest.replace(/[-](bengaluru|bangalore|mumbai|delhi|ncr|pune|hyderabad|chennai|gurgaon|gurugram|noida|remote|india|\d[-\d]*[-to]*[-yrs]*).*$/i, '');
+      const company = companySlug.split('-').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      return { role, company };
+    }
+  }
+  return {};
 }

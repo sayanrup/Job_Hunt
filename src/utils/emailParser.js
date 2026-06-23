@@ -4,11 +4,9 @@ const TARGET_ROLES = ['product manager', 'senior product manager'];
 
 const LINK_PATTERNS = [
   /https?:\/\/[^\s"'<>]*naukri\.com\/job-listings[^\s"'<>]*/gi,
-  /https?:\/\/[^\s"'<>]*naukri\.com\/[^"'\s<>]*job[^\s"'<>]*/gi,
   /https?:\/\/[^\s"'<>]*linkedin\.com\/jobs\/view[^\s"'<>]*/gi,
   /https?:\/\/[^\s"'<>]*linkedin\.com\/comm\/jobs\/view[^\s"'<>]*/gi,
   /https?:\/\/[^\s"'<>]*glassdoor\.com\/job-listing[^\s"'<>]*/gi,
-  /https?:\/\/[^\s"'<>]*glassdoor\.com\/[^"'\s<>]*job[^\s"'<>]*/gi,
 ];
 
 export function isTargetRole(role = '') {
@@ -51,10 +49,6 @@ export function extractJobLinks(text, html = '') {
   for (const re of LINK_PATTERNS) {
     (source.match(re) || []).forEach(m => found.add(m.replace(/[.,;:'">[\])\s]+$/, '')));
   }
-  (source.match(/https?:\/\/[^\s"'<>]+/gi) || []).forEach(link => {
-    const clean = link.replace(/[.,;:'">[\])\s]+$/, '');
-    if (/naukri\.com|linkedin\.com\/jobs|glassdoor\.com/.test(clean)) found.add(clean);
-  });
   return [...found].slice(0, 5);
 }
 
