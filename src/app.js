@@ -146,7 +146,8 @@ export class App {
   async _scanGmail(days) {
     const after = Math.floor((Date.now() - days * 86400_000) / 1000);
     const queries = [
-      `subject:"Priority Applicant" after:${after}`,
+      `from:"Priority Applicant" after:${after}`,
+      `from:naukri after:${after}`,
       `from:jobalerts-noreply@linkedin.com after:${after}`,
       `from:glassdoor after:${after}`,
     ];

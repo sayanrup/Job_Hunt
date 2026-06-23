@@ -1,4 +1,4 @@
-const JOB_SENDERS = ['naukri', 'linkedin.com', 'glassdoor'];
+const JOB_SENDERS = ['naukri', 'priority applicant', 'linkedin.com', 'glassdoor'];
 
 const TARGET_ROLES = ['product manager', 'senior product manager'];
 
