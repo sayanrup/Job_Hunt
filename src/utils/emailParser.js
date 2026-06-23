@@ -45,20 +45,43 @@ export function decodeEmailBody(message) {
 }
 
 export function extractJobLinks(text, html = '') {
-  const source = text + ' ' + html;
   const found = new Set();
+
+  // Primary: parse href attributes from anchor tags in HTML (catches "View & Apply" links)
+  if (html) {
+    const div = document.createElement('div');
+    div.innerHTML = html;
+    div.querySelectorAll('a[href]').forEach(a => {
+      const href = a.href || '';
+      if (isJobUrl(href)) found.add(href);
+    });
+  }
+
+  // Secondary: regex patterns on raw text/HTML source
+  const source = text + ' ' + html;
   for (const re of LINK_PATTERNS) {
     (source.match(re) || []).forEach(m => found.add(m.replace(/[.,;:'">[\])\s]+$/, '')));
   }
+
+  // Fallback: any job-related URL, excluding images and assets
   if (found.size === 0) {
     (source.match(/https?:\/\/[^\s"'<>]+/gi) || []).forEach(link => {
       const clean = link.replace(/[.,;:'">[\])\s]+$/, '');
-      if (/naukri\.com/.test(clean) && !/\/(login|signup|jobseeker\/profile|settings)/.test(clean)) found.add(clean);
-      else if (/linkedin\.com\/jobs/.test(clean)) found.add(clean);
-      else if (/glassdoor\.com\/job/.test(clean)) found.add(clean);
+      if (/\.(png|jpg|jpeg|gif|webp|svg|css|js|ico|woff)(\?|$)/i.test(clean)) return;
+      if (/\/(images?|assets?|static|mailers?)\//i.test(clean)) return;
+      if (isJobUrl(clean)) found.add(clean);
     });
   }
+
   return [...found].slice(0, 5);
+}
+
+function isJobUrl(url) {
+  if (!url) return false;
+  if (/naukri\.com/.test(url) && !/\/(login|signup|jobseeker\/profile|settings)/.test(url)) return true;
+  if (/linkedin\.com\/jobs/.test(url)) return true;
+  if (/glassdoor\.com\/job/.test(url)) return true;
+  return false;
 }
 
 function decodeBase64Url(str) {
