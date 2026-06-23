@@ -144,18 +144,25 @@ export class App {
   }
 
   async _scanGmail(days) {
-    const after = Math.floor((Date.now() - days * 86400_000) / 1000);
     const queries = [
-      `from:"Priority Applicant" after:${after}`,
-      `from:naukri after:${after}`,
-      `from:jobalerts-noreply@linkedin.com after:${after}`,
-      `from:glassdoor after:${after}`,
+      `from:"Priority Applicant" newer_than:${days}d`,
+      `from:naukri newer_than:${days}d`,
+      `from:jobalerts-noreply@linkedin.com newer_than:${days}d`,
+      `from:glassdoor newer_than:${days}d`,
     ];
+    const seen = new Set();
     const all = [];
     for (const q of queries) {
       try {
         const msgs = await this.gmail.listMessages(q, 20);
-        for (const m of msgs) { const full = await this.gmail.getMessage(m.id); if (isJobEmail(full)) all.push(full); }
+        this.log(`  Query "${q.split(' ')[0]} ${q.split(' ')[1]}" → ${msgs.length} result(s)`);
+        for (const m of msgs) {
+          if (seen.has(m.id)) continue;
+          seen.add(m.id);
+          const full = await this.gmail.getMessage(m.id);
+          if (isJobEmail(full)) all.push(full);
+          else this.log(`  ↷ Skipped (sender not matched): ${m.id}`, 'warn');
+        }
       } catch (e) { this.log(`Scan warning: ${e.message}`, 'warn'); }
     }
     return all;
