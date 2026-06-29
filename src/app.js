@@ -118,7 +118,9 @@ export class App {
         this.log(`  → Draft created for ${job.hmEmail}`);
 
         if (this.sheets && this.spreadsheetId) {
-          await this.sheets.appendRow(this.spreadsheetId, SHEET_NAME, [date, job.company, job.role, link || '', job.hmEmail, cvLink, 'Pending']);
+          const jdLink = job.jdLink || link || '';
+          const hmContact = job.hmEmail || job.hmLinkedIn || '';
+          await this.sheets.appendRow(this.spreadsheetId, SHEET_NAME, [date, job.company, job.role, jdLink, hmContact, cvLink, 'Pending']);
           this.log('  → Row added to tracker');
         }
 
@@ -191,9 +193,10 @@ export class App {
         </div>
         <div class="job-card-body">
           <div class="job-meta">
-            ${link ? `<a href="${esc(link)}" target="_blank" class="link">📋 View JD</a>` : ''}
+            ${(job.jdLink || link) ? `<a href="${esc(job.jdLink || link)}" target="_blank" class="link">📋 View JD</a>` : ''}
             ${cvLink ? `<a href="${esc(cvLink)}" target="_blank" class="link">📄 View CV on Drive</a>` : ''}
-            ${job.hmEmail ? `<span class="hm-email">📧 ${esc(job.hmEmail)}</span>` : ''}
+            ${job.hmEmail ? `<a href="mailto:${esc(job.hmEmail)}" class="link">📧 ${esc(job.hmEmail)}</a>` : ''}
+            ${job.hmLinkedIn ? `<a href="${esc(job.hmLinkedIn)}" target="_blank" class="link">🔗 Hiring Team Profile</a>` : ''}
             ${job.location ? `<span style="color:var(--text-muted);font-size:13px">📍 ${esc(job.location)}</span>` : ''}
           </div>
           ${coverLetter ? `

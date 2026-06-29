@@ -4,9 +4,9 @@ export class ContentGenerator {
   async extractJobDetails(url, subject, emailText) {
     const system = `You are a job data extraction assistant. Extract structured information from job suggestion emails.
 IMPORTANT: Extract "company" and "role" from the job listing body content, NOT from the email subject line.
-Return ONLY a valid JSON object. Schema: {"company":"string","role":"string","location":"string or null","jdSummary":"2-3 sentence summary","keySkills":["skill1"],"hmEmail":"email or null"}`;
+Return ONLY a valid JSON object. Schema: {"company":"string","role":"string","location":"string or null","jdSummary":"2-3 sentence summary","keySkills":["skill1"],"hmEmail":"email or null","hmLinkedIn":"LinkedIn profile URL of hiring manager/recruiter or null","jdLink":"direct job posting URL or null"}`;
     const user = `Job URL: ${url || 'not available'}\nEmail Subject: ${subject}\n\nEmail Content:\n${emailText.slice(0, 3000)}`;
-    const raw = await this.api.complete(system, user, 600);
+    const raw = await this.api.complete(system, user, 700);
     try {
       const match = raw.match(/\{[\s\S]*\}/);
       if (!match) return this._fallback(subject, url);
@@ -31,6 +31,8 @@ Return ONLY a valid JSON object. Schema: {"company":"string","role":"string","lo
       jdSummary: subject,
       keySkills: [],
       hmEmail: null,
+      hmLinkedIn: null,
+      jdLink: url || null,
     };
   }
 
