@@ -1,5 +1,5 @@
 export class OpenRouterAPI {
-  constructor(apiKey, model = 'anthropic/claude-haiku-4-5') {
+  constructor(apiKey, model = 'anthropic/claude-sonnet-4-6') {
     this.apiKey = apiKey;
     this.model = model;
   }
