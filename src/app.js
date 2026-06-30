@@ -3,7 +3,7 @@ import { DriveAPI } from './api/drive.js';
 import { SheetsAPI } from './api/sheets.js';
 import { OpenRouterAPI } from './api/openrouter.js';
 import { ContentGenerator } from './utils/generator.js';
-import { isJobEmail, isTargetRole, getHeader, getJobBoard, decodeEmailBody, extractJobLinks } from './utils/emailParser.js';
+import { isTargetRole, getHeader, getJobBoard, decodeEmailBody, extractJobLinks } from './utils/emailParser.js';
 
 const SHEET_NAME = 'Job Applications Tracker';
 const ROOT_FOLDER = 'Job Hunt Automation';
@@ -61,7 +61,7 @@ export class App {
     for (const email of emails) {
       const { text, html } = decodeEmailBody(email);
       const subject = getHeader(email, 'subject');
-      const board = getJobBoard(email);
+      const board = email._board || getJobBoard(email);
       const links = extractJobLinks(text, html).filter(l => !seenLinks.has(l) && seenLinks.add(l));
       if (links.length) links.forEach(link => leads.push({ link, text, subject, board }));
       else if (!seenLinks.has(subject) && seenLinks.add(subject)) leads.push({ link: null, text, subject, board });
@@ -153,24 +153,24 @@ export class App {
   }
 
   async _scanGmail(days) {
-    const queries = [
-      `from:"Priority Applicant" newer_than:${days}d`,
-      `from:naukri newer_than:${days}d`,
-      `from:jobalerts-noreply@linkedin.com newer_than:${days}d`,
-      `from:glassdoor newer_than:${days}d`,
+    const labelQueries = [
+      { label: 'LinkedIn', board: 'LinkedIn' },
+      { label: 'Naukri', board: 'Naukri' },
+      { label: 'Glassdoor', board: 'Glassdoor' },
     ];
     const seen = new Set();
     const all = [];
-    for (const q of queries) {
+    for (const { label, board } of labelQueries) {
+      const q = `label:${label} newer_than:${days}d`;
       try {
         const msgs = await this.gmail.listMessages(q, 20);
-        this.log(`  Query "${q.split(' ')[0]} ${q.split(' ')[1]}" → ${msgs.length} result(s)`);
+        this.log(`  Label "${label}" → ${msgs.length} result(s)`);
         for (const m of msgs) {
           if (seen.has(m.id)) continue;
           seen.add(m.id);
           const full = await this.gmail.getMessage(m.id);
-          if (isJobEmail(full)) all.push(full);
-          else this.log(`  ↷ Skipped (sender not matched): ${m.id}`, 'warn');
+          full._board = board;
+          all.push(full);
         }
       } catch (e) { this.log(`Scan warning: ${e.message}`, 'warn'); }
     }
