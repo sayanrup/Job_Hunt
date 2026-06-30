@@ -96,7 +96,8 @@ export class App {
           this.log(`  ↷ No HM email — skipping CV generation`, 'warn');
           if (this.sheets && this.spreadsheetId) {
             const date = new Date().toISOString().split('T')[0];
-            await this.sheets.appendRow(this.spreadsheetId, SHEET_NAME, [date, job.company, job.role, link || '', '', '', 'No HM Email']);
+            const jdLink = job.jdLink || link || '';
+            await this.sheets.appendRow(this.spreadsheetId, SHEET_NAME, [date, job.company, job.role, jdLink, job.hmLinkedIn || '', '', 'No HM Email']);
           }
           this.results.push({ job, link, cvLink: null, coverLetter: null, draftCreated: false });
           this._renderResults();
