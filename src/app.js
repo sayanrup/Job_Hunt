@@ -3,7 +3,7 @@ import { DriveAPI } from './api/drive.js';
 import { SheetsAPI } from './api/sheets.js';
 import { OpenRouterAPI } from './api/openrouter.js';
 import { ContentGenerator } from './utils/generator.js';
-import { isJobEmail, isTargetRole, getHeader, decodeEmailBody, extractJobLinks } from './utils/emailParser.js';
+import { isJobEmail, isTargetRole, getHeader, getJobBoard, decodeEmailBody, extractJobLinks } from './utils/emailParser.js';
 
 const SHEET_NAME = 'Job Applications Tracker';
 const ROOT_FOLDER = 'Job Hunt Automation';
@@ -61,9 +61,10 @@ export class App {
     for (const email of emails) {
       const { text, html } = decodeEmailBody(email);
       const subject = getHeader(email, 'subject');
+      const board = getJobBoard(email);
       const links = extractJobLinks(text, html).filter(l => !seenLinks.has(l) && seenLinks.add(l));
-      if (links.length) links.forEach(link => leads.push({ link, text, subject }));
-      else if (!seenLinks.has(subject) && seenLinks.add(subject)) leads.push({ link: null, text, subject });
+      if (links.length) links.forEach(link => leads.push({ link, text, subject, board }));
+      else if (!seenLinks.has(subject) && seenLinks.add(subject)) leads.push({ link: null, text, subject, board });
     }
     this.log(`Extracted ${leads.length} job lead(s)`);
     this.step('step-parse', 'active');
@@ -80,7 +81,7 @@ export class App {
 
     const seenJobs = new Set();
     for (let i = 0; i < leads.length; i++) {
-      const { link, text, subject } = leads[i];
+      const { link, text, subject, board } = leads[i];
       this.log(`Job ${i + 1}/${leads.length}: ${subject.slice(0, 55)}...`);
       try {
         const job = await gen.extractJobDetails(link, subject, text);
@@ -97,7 +98,7 @@ export class App {
           if (this.sheets && this.spreadsheetId) {
             const date = new Date().toISOString().split('T')[0];
             const jdLink = job.jdLink || link || '';
-            await this.sheets.appendRow(this.spreadsheetId, SHEET_NAME, [date, job.company, job.role, jdLink, job.hmLinkedIn || '', '', 'No HM Email']);
+            await this.sheets.appendRow(this.spreadsheetId, SHEET_NAME, [date, job.company, job.role, board, jdLink, job.hmLinkedIn || '', '', 'No HM Email']);
           }
           this.results.push({ job, link, cvLink: null, coverLetter: null, draftCreated: false });
           this._renderResults();
@@ -121,7 +122,7 @@ export class App {
         if (this.sheets && this.spreadsheetId) {
           const jdLink = job.jdLink || link || '';
           const hmContact = job.hmEmail || job.hmLinkedIn || '';
-          await this.sheets.appendRow(this.spreadsheetId, SHEET_NAME, [date, job.company, job.role, jdLink, hmContact, cvLink, 'Pending']);
+          await this.sheets.appendRow(this.spreadsheetId, SHEET_NAME, [date, job.company, job.role, board, jdLink, hmContact, cvLink, 'Pending']);
           this.log('  → Row added to tracker');
         }
 
@@ -138,13 +139,13 @@ export class App {
   async _cleanup() {
     if (!this.sheets || !this.spreadsheetId) { this.log('No sheet configured, skipping cleanup'); return; }
     try {
-      const rows = await this.sheets.getValues(this.spreadsheetId, `${SHEET_NAME}!A2:G`);
+      const rows = await this.sheets.getValues(this.spreadsheetId, `${SHEET_NAME}!A2:H`);
       let n = 0;
       for (let i = 0; i < rows.length; i++) {
-        const [,,,,,cvLink, status] = rows[i];
+        const [,,,,,,cvLink, status] = rows[i];
         if (status === 'Sent' && cvLink) {
           const m = cvLink.match(/\/file\/d\/([^/]+)/);
-          if (m) { await this.drive.deleteFile(m[1]).catch(() => {}); await this.sheets.updateCell(this.spreadsheetId, `${SHEET_NAME}!G${i + 2}`, 'Deleted'); n++; }
+          if (m) { await this.drive.deleteFile(m[1]).catch(() => {}); await this.sheets.updateCell(this.spreadsheetId, `${SHEET_NAME}!H${i + 2}`, 'Deleted'); n++; }
         }
       }
       this.log(`Cleanup: removed ${n} CV(s)`);

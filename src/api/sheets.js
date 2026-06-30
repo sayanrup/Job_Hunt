@@ -17,9 +17,9 @@ export class SheetsAPI {
   }
 
   async ensureHeaders(spreadsheetId, sheetName) {
-    const headers = ['Date', 'Company', 'Role', 'JD Link', 'HM Email', 'CV Drive Link', 'Status'];
+    const headers = ['Date', 'Company', 'Role', 'Job Board', 'JD Link', 'HM Email', 'CV Drive Link', 'Status'];
     await this.ensureSheet(spreadsheetId, sheetName);
-    const range = `${sheetName}!A1:G1`;
+    const range = `${sheetName}!A1:H1`;
     const data = await this._fetch(`/${spreadsheetId}/values/${encodeURIComponent(range)}`);
     if (!data.values?.length) {
       await this._fetch(`/${spreadsheetId}/values/${encodeURIComponent(range)}?valueInputOption=USER_ENTERED`, { method: 'PUT', body: JSON.stringify({ values: [headers] }) });
@@ -32,7 +32,7 @@ export class SheetsAPI {
   }
 
   async appendRow(spreadsheetId, sheetName, row) {
-    return this._fetch(`/${spreadsheetId}/values/${encodeURIComponent(`${sheetName}!A:G`)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`, { method: 'POST', body: JSON.stringify({ values: [row] }) });
+    return this._fetch(`/${spreadsheetId}/values/${encodeURIComponent(`${sheetName}!A:H`)}:append?valueInputOption=USER_ENTERED&insertDataOption=INSERT_ROWS`, { method: 'POST', body: JSON.stringify({ values: [row] }) });
   }
 
   async updateCell(spreadsheetId, range, value) {
