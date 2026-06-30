@@ -19,6 +19,14 @@ export function isJobEmail(message) {
   return JOB_SENDERS.some(s => from.includes(s));
 }
 
+export function getJobBoard(message) {
+  const from = (message.payload?.headers || []).find(h => h.name.toLowerCase() === 'from')?.value?.toLowerCase() || '';
+  if (from.includes('linkedin.com')) return 'LinkedIn';
+  if (from.includes('naukri') || from.includes('priority applicant')) return 'Naukri';
+  if (from.includes('glassdoor')) return 'Glassdoor';
+  return 'Other';
+}
+
 export function getHeader(message, name) {
   return (message.payload?.headers || []).find(h => h.name.toLowerCase() === name.toLowerCase())?.value || '';
 }
