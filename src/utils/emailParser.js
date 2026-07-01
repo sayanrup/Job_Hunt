@@ -3,10 +3,10 @@ const JOB_SENDERS = ['naukri', 'priority applicant', 'linkedin.com', 'glassdoor'
 const TARGET_ROLES = ['product manager', 'senior product manager'];
 
 const LINK_PATTERNS = [
-  /https?:\/\/[^\s"'<>]*naukri\.com\/job-listings[^\s"'<>]*/gi,
+  /https?:\/\/[^\s"'<>]*naukri\.com\/(?:job-listings|jobs-in|apply|jd)[^\s"'<>]*/gi,
   /https?:\/\/[^\s"'<>]*linkedin\.com\/jobs\/view[^\s"'<>]*/gi,
   /https?:\/\/[^\s"'<>]*linkedin\.com\/comm\/jobs\/view[^\s"'<>]*/gi,
-  /https?:\/\/[^\s"'<>]*glassdoor\.com\/job-listing[^\s"'<>]*/gi,
+  /https?:\/\/[^\s"'<>]*glassdoor\.co(?:m|\.in)\/job-listing[^\s"'<>]*/gi,
 ];
 
 export function isTargetRole(role = '') {
@@ -86,9 +86,9 @@ export function extractJobLinks(text, html = '') {
 
 function isJobUrl(url) {
   if (!url) return false;
-  if (/^https?:\/\/(?:www\.)?naukri\.com\/(job-listings|jobs-in|apply)/.test(url)) return true;
+  if (/naukri\.com\/(job-listings|jobs-in|apply|jd)/.test(url)) return true;
   if (/linkedin\.com\/(comm\/)?jobs\/view/.test(url)) return true;
-  if (/glassdoor\.com\/job-listing/.test(url)) return true;
+  if (/glassdoor\.co(?:m|\.in)\/job-listing/.test(url)) return true;
   return false;
 }
 

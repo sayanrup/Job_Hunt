@@ -153,18 +153,18 @@ export class App {
   }
 
   async _scanGmail(days) {
-    const labelQueries = [
-      { label: 'LinkedIn', board: 'LinkedIn' },
-      { label: 'Naukri', board: 'Naukri' },
-      { label: 'Glassdoor', board: 'Glassdoor' },
+    const sources = [
+      { q: `label:LinkedIn newer_than:${days}d`, board: 'LinkedIn', tag: 'label:LinkedIn' },
+      { q: `label:Naukri newer_than:${days}d`, board: 'Naukri', tag: 'label:Naukri' },
+      { q: `label:Glassdoor newer_than:${days}d`, board: 'Glassdoor', tag: 'label:Glassdoor' },
+      { q: `from:glassdoor newer_than:${days}d`, board: 'Glassdoor', tag: 'from:glassdoor' },
     ];
     const seen = new Set();
     const all = [];
-    for (const { label, board } of labelQueries) {
-      const q = `label:${label} newer_than:${days}d`;
+    for (const { q, board, tag } of sources) {
       try {
         const msgs = await this.gmail.listMessages(q, 20);
-        this.log(`  Label "${label}" → ${msgs.length} result(s)`);
+        this.log(`  ${tag} → ${msgs.length} result(s)`);
         for (const m of msgs) {
           if (seen.has(m.id)) continue;
           seen.add(m.id);
